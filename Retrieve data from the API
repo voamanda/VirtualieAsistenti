@@ -1,0 +1,25 @@
+import requests
+import pandas as pd
+
+# API endpoint for the Cat Facts API (fetches random facts)
+url = "https://catfact.ninja/facts"
+
+# Send a GET request to fetch cat facts
+response = requests.get(url)
+
+# Check if the request was successful
+if response.status_code == 200:
+    data = response.json()
+    
+    # Extract facts into a list
+    cat_facts = [fact['fact'] for fact in data['data']]
+    
+    # Create a pandas DataFrame to display the facts
+    facts_df = pd.DataFrame({
+        'Cat Fact': cat_facts
+    })
+    
+    # Display the first 5 facts
+    print(facts_df.head(5))
+else:
+    print("Failed to retrieve data")
