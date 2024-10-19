@@ -1,0 +1,62 @@
+import requests
+import pandas as pd
+
+# Function to get data from the Cat Facts API
+def get_cat_facts():
+    url = "https://catfact.ninja/facts"
+    response = requests.get(url)
+    
+    if response.status_code == 200:
+        data = response.json()
+        cat_facts = [fact['fact'] for fact in data['data']]
+        facts_df = pd.DataFrame({'Cat Fact': cat_facts})
+        print(facts_df.head(5))  # Show first 5 facts
+    else:
+        print("Failed to retrieve data from Cat Facts API")
+
+# Function to get data from the JSONPlaceholder API (user data)
+def get_users_data():
+    url = "https://jsonplaceholder.typicode.com/users"
+    response = requests.get(url)
+    
+    if response.status_code == 200:
+        data = response.json()
+        users = [{'Name': user['name'], 'Email': user['email'], 'City': user['address']['city']} for user in data]
+        users_df = pd.DataFrame(users)
+        print(users_df.head(5))  # Show first 5 users
+    else:
+        print("Failed to retrieve data from JSONPlaceholder API")
+
+# Function to get weather data from Open-Meteo API
+def get_weather_data():
+    latitude = 35.6895
+    longitude = 139.6917
+    url = f"https://api.open-meteo.com/v1/forecast?latitude={latitude}&longitude={longitude}&hourly=temperature_2m"
+    response = requests.get(url)
+    
+    if response.status_code == 200:
+        data = response.json()
+        time_data = data['hourly']['time']
+        temperature_data = data['hourly']['temperature_2m']
+        weather_df = pd.DataFrame({'Time': time_data, 'Temperature (°C)': temperature_data})
+        print(weather_df.head(5))  # Show first 5 hours of temperature data
+    else:
+        print("Failed to retrieve data from Open-Meteo API")
+
+# Function to check user input and call the appropriate API
+def check_input(user_input):
+    if "cat" in user_input.lower():
+        print("Fetching cat facts for you...")
+        get_cat_facts()
+    elif "user" in user_input.lower():
+        print("Fetching user data for you...")
+        get_users_data()
+    elif "weather" in user_input.lower():
+        print("Fetching weather data for you...")
+        get_weather_data()
+    else:
+        print("No matching condition for input. Please enter 'cat', 'user', or 'weather'.")
+
+# Simulate user input
+user_input = input("Enter a keyword (cat, user, or weather): ")
+check_input(user_input)
