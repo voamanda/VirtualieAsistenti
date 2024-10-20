@@ -1,0 +1,143 @@
+import openai
+import requests
+import random
+import time
+
+openai.api_key = "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"
+
+tools = [
+    {
+        "type": "function",
+        "function": {
+            "name": "get_cat_fact",
+            "description": "Fetches a random cat fact",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": []
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_http_cat_401",
+            "description": "Fetches an HTTP 401 image of a cat",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": []
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_place_bear",
+            "description": "Fetches an image of a bear from placebear.com",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": []
+            }
+        }
+    }
+]
+
+assistant = openai.beta.assistants.create(
+    name="API Assistant",
+    instructions="You are an assistant with access to custom tools that return cat facts, HTTP cat images, and bear images.",
+    model="gpt-4o-mini",
+    tools=tools
+)
+
+print(f"Assistant created with ID: {assistant.id}")
+
+def get_cat_fact():
+    response = requests.get("https://catfact.ninja/fact")
+    if response.status_code == 200:
+        return response.json()["fact"]
+    return "Could not retrieve a cat fact."
+
+def get_http_cat_401():
+    return "https://http.cat/401"
+
+def get_place_bear():
+    return "https://placebear.com/200/300"
+
+thread = openai.beta.threads.create()
+print(f"Thread created with ID: {thread.id}")
+
+print("Submitting your query to assistant")
+message = openai.beta.threads.messages.create(
+    thread_id=thread.id,
+    role="user",
+    content="Tell me a cat fact, show me a 401 cat image, and a bear image."
+)
+
+run = openai.beta.threads.runs.create(
+    thread_id=thread.id,
+    assistant_id=assistant.id
+)
+
+attempt = 1
+while run.status != "completed":
+    print(f"Run status: {run.status}, attempt: {attempt}")
+    run = openai.beta.threads.runs.retrieve(thread_id=thread.id, run_id=run.id)
+
+    if run.status == "requires_action":
+        break
+
+    attempt += 1
+    time.sleep(2)
+
+if run.status == "requires_action":
+    print("Run requires action, assistant wants to use a tool")
+
+    tool_outputs = []
+    for tool_call in run.required_action.submit_tool_outputs.tool_calls:
+        if tool_call.function.name == "get_cat_fact":
+            print(" get_cat_fact called")
+            output = get_cat_fact()
+        elif tool_call.function.name == "get_http_cat_401":
+            print(" get_http_cat_401 called")
+            output = get_http_cat_401()
+        elif tool_call.function.name == "get_place_bear":
+            print(" get_place_bear called")
+            output = get_place_bear()
+        else:
+            print("Unknown function call")
+            output = None
+        
+        print(f" Generated output: {output}")
+        
+        tool_outputs.append({
+            "tool_call_id": tool_call.id,
+            "output": str(output)
+        })
+
+    openai.beta.threads.runs.submit_tool_outputs(
+        thread_id=thread.id,
+        run_id=run.id,
+        tool_outputs=tool_outputs
+    )
+
+    print("Submitting tool results to assistant")
+
+if run.status == "requires_action":
+    run = openai.beta.threads.runs.retrieve(thread_id=thread.id, run_id=run.id)
+    attempt = 1
+    while run.status not in ["completed", "failed"]:
+        print(f"Run status: {run.status}, attempt: {attempt}")
+        time.sleep(2)
+        run = openai.beta.threads.runs.retrieve(thread_id=thread.id, run_id=run.id)
+        attempt += 1
+
+if run.status == "completed":
+    messages = openai.beta.threads.messages.list(thread_id=thread.id)
+    final_answer = messages.data[0].content[0].text.value
+    print(f"=========\n{final_answer}")
+elif run.status == "failed":
+    print("The run failed. Please check the error messages.")
+else:
+    print(f"Unexpected run status: {run.status}")
