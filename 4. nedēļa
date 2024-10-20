@@ -1,0 +1,91 @@
+import sqlite3
+import csv
+
+def create_database():
+    conn = sqlite3.connect('assistant_data.db')
+    cursor = conn.cursor()
+
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        age INTEGER,
+        city TEXT
+    )
+    ''')
+
+    conn.commit()
+    conn.close()
+    print("Database and table created.")
+
+def add_user(name, age, city):
+    conn = sqlite3.connect('assistant_data.db')
+    cursor = conn.cursor()
+
+    cursor.execute('INSERT INTO users (name, age, city) VALUES (?, ?, ?)', (name, age, city))
+    conn.commit()
+    conn.close()
+
+    print(f"User {name} added to the database.")
+
+def query_users():
+    conn = sqlite3.connect('assistant_data.db')
+    cursor = conn.cursor()
+
+    cursor.execute('SELECT * FROM users')
+    rows = cursor.fetchall()
+    
+    print("User List:")
+    for row in rows:
+        print(row)
+    
+    conn.close()
+
+def import_data_from_csv(csv_file):
+    conn = sqlite3.connect('assistant_data.db')
+    cursor = conn.cursor()
+
+    with open(csv_file, newline='') as file:
+        reader = csv.reader(file)
+        next(reader)
+        for row in reader:
+            cursor.execute('INSERT INTO users (name, age, city) VALUES (?, ?, ?)', row)
+
+    conn.commit()
+    conn.close()
+
+    print(f"Data from {csv_file} imported successfully.")
+
+def assistant_add_user():
+    name = input("Enter user name: ")
+    age = int(input("Enter user age: "))
+    city = input("Enter user city: ")
+    
+    add_user(name, age, city)
+
+def assistant_show_users():
+    print("Here is the list of users in the database:")
+    query_users()
+
+def main():
+    create_database()
+
+    while True:
+        action = input("Do you want to add a user, show all users, or import from CSV? (add/show/import/exit): ").lower()
+
+        if action == "add":
+            assistant_add_user()
+        elif action == "show":
+            assistant_show_users()
+        elif action == "import":
+            csv_file = input("Enter the path to the CSV file: ")
+            import_data_from_csv(csv_file)
+            assistant_show_users()
+        elif action == "exit":
+            print("Exiting the assistant.")
+            break
+        else:
+            print("Invalid action. Please choose add, show, import, or exit.")
+
+if __name__ == "__main__":
+    main()
